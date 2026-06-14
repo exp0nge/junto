@@ -115,6 +115,20 @@ pnpm tsx src/rsvp.ts          ethny.juntoevents.eth alice # RSVP -> mints alice.
 
 Cross-check the resulting ticket subname on https://sepolia.app.ens.domains.
 
+## Live on Sepolia
+
+The full loop is deployed and verified end-to-end (paymentless):
+
+| Thing | Value |
+|---|---|
+| Parent name | `juntoevents.eth` (registered + wrapped) |
+| `EventManager` | [`0xd1CF5206ea14DA67cd2c58796F7B34A45802F1d6`](https://sepolia.etherscan.io/address/0xd1CF5206ea14DA67cd2c58796F7B34A45802F1d6) |
+| Example event | `ethny.juntoevents.eth` |
+| Example ticket | `alice.ethny.juntoevents.eth` → `xyz.junto.status = "going"` |
+
+Verified agent run: discover event by ENS resolution → `rsvp()` mints the ticket subname →
+re-resolve confirms `status=going` (see `assets/screenshot-3-agent.png`).
+
 ## Prerequisite
 
 A **wrapped 2LD on Sepolia** (we use `juntoevents.eth`) owned by the deployer key, funded

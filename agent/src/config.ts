@@ -1,6 +1,10 @@
+import { existsSync } from "node:fs";
 import { createPublicClient, createWalletClient, http, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
+
+// Load .env from the agent directory (Node 20.12+ built-in; no dotenv dependency).
+if (existsSync(".env")) process.loadEnvFile(".env");
 
 const RPC_URL = process.env.SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com";
 
