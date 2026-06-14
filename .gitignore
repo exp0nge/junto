@@ -1,0 +1,12 @@
+# secrets
+.env
+.env.local
+
+# node
+node_modules/
+
+# foundry (run `forge install` after clone — see README)
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
