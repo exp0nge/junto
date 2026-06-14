@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Junto" width="140" />
+</p>
+
 # Junto
 
 **Luma/Meetup, rebuilt on ENS.** An event *is* an ENS subname; an RSVP *is* an on-chain
@@ -129,6 +133,8 @@ RSVPs by calling the contract from an injected wallet (MetaMask) on Sepolia — 
 
 ## Live on Sepolia
 
+**Demo:** https://exp0nge.github.io/junto/ (reads are live; RSVP needs MetaMask on Sepolia)
+
 The full loop is deployed and verified end-to-end (paymentless):
 
 | Thing | Value |
@@ -140,6 +146,13 @@ The full loop is deployed and verified end-to-end (paymentless):
 
 Verified agent run: discover event by ENS resolution → `rsvp()` mints the ticket subname →
 re-resolve confirms `status=going` (see `assets/screenshot-3-agent.png`).
+
+<p align="center">
+  <img src="assets/app-home.png" alt="Junto web app reading live ENS data" width="640" />
+</p>
+
+The web app above reads the event, RSVP count, and attendee ticket subnames live from ENS
+records and on-chain logs — no backend.
 
 ## Prerequisite
 
