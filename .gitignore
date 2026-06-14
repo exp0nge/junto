@@ -13,3 +13,5 @@ contracts/lib/
 
 # macOS
 .DS_Store
+*.tsbuildinfo
+web/dist/

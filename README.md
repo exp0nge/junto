@@ -91,6 +91,8 @@ graph LR
 ```
 contracts/   Foundry: EventManager.sol + deploy/create scripts + tests
 agent/        viem TS client: resolve an event, RSVP, verify the ticket subname
+web/          Vite + React UI: browse an event, RSVP from a wallet, see ticket subnames
+assets/       logo, cover, and screenshots
 ```
 
 ## Run it
@@ -114,6 +116,16 @@ pnpm tsx src/rsvp.ts          ethny.juntoevents.eth alice # RSVP -> mints alice.
 ```
 
 Cross-check the resulting ticket subname on https://sepolia.app.ens.domains.
+
+```bash
+# 3. Web UI (reads live data; defaults point at the deployed contract)
+cd ../web
+pnpm install
+pnpm dev          # http://localhost:5183 — browse the event, RSVP from a wallet
+```
+
+The UI reads event metadata from ENS records and the attendee list from `RSVP` logs, and
+RSVPs by calling the contract from an injected wallet (MetaMask) on Sepolia — no backend.
 
 ## Live on Sepolia
 
