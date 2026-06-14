@@ -12,11 +12,10 @@ import { sepolia } from "viem/chains";
 export const RPC_URL =
   import.meta.env.VITE_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com";
 export const EVENT_MANAGER = (import.meta.env.VITE_EVENT_MANAGER ??
-  "0xd1CF5206ea14DA67cd2c58796F7B34A45802F1d6") as Address;
+  "0x7BaA0fA7193F62aB746735D960c44cE418d65537") as Address;
 export const PUBLIC_RESOLVER = (import.meta.env.VITE_PUBLIC_RESOLVER ??
   "0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5") as Address;
-export const DEFAULT_EVENT =
-  import.meta.env.VITE_EVENT_NAME ?? "ethny.juntoevents.eth";
+export const PARENT_NAME = import.meta.env.VITE_PARENT_NAME ?? "juntoevents.eth";
 export const FROM_BLOCK = BigInt(import.meta.env.VITE_FROM_BLOCK ?? "11055180");
 
 export const publicClient = createPublicClient({
@@ -24,30 +23,49 @@ export const publicClient = createPublicClient({
   transport: http(RPC_URL),
 });
 
+export function hasWallet() {
+  return typeof (window as any).ethereum !== "undefined";
+}
+
 export async function getWallet() {
   const eth = (window as any).ethereum;
-  if (!eth) throw new Error("No injected wallet found (install MetaMask).");
+  if (!eth) throw new Error("No injected wallet found. Install MetaMask to RSVP or host.");
   const wallet = createWalletClient({ chain: sepolia, transport: custom(eth) });
   const [account] = await wallet.requestAddresses();
-  // Make sure we're on Sepolia.
   try {
     await wallet.switchChain({ id: sepolia.id });
   } catch {
-    /* user may already be on Sepolia or reject; reads still work */
+    /* already on Sepolia or rejected; reads still work */
   }
   return { wallet, account };
 }
 
 export { namehash };
 
+// Text-record keys this app reads/writes (the ENS "schema").
 export const KEYS = {
   title: "xyz.junto.title",
   location: "xyz.junto.location",
   capacity: "xyz.junto.capacity",
+  date: "xyz.junto.date",
+  category: "xyz.junto.category",
   status: "xyz.junto.status",
+  url: "url",
 } as const;
 
 export const EVENT_MANAGER_ABI = [
+  {
+    type: "function",
+    name: "createEvent",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "label", type: "string" },
+      { name: "capacity", type: "uint256" },
+      { name: "keys", type: "string[]" },
+      { name: "values", type: "string[]" },
+    ],
+    outputs: [{ name: "eventNode", type: "bytes32" }],
+  },
   {
     type: "function",
     name: "rsvp",
@@ -60,6 +78,20 @@ export const EVENT_MANAGER_ABI = [
   },
   {
     type: "function",
+    name: "revokeEvent",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "eventNode", type: "bytes32" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "owner",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
     name: "events",
     stateMutability: "view",
     inputs: [{ name: "", type: "bytes32" }],
@@ -68,6 +100,16 @@ export const EVENT_MANAGER_ABI = [
       { name: "capacity", type: "uint256" },
       { name: "rsvpCount", type: "uint256" },
       { name: "exists", type: "bool" },
+    ],
+  },
+  {
+    type: "event",
+    name: "EventCreated",
+    inputs: [
+      { name: "eventNode", type: "bytes32", indexed: true },
+      { name: "host", type: "address", indexed: true },
+      { name: "label", type: "string", indexed: false },
+      { name: "capacity", type: "uint256", indexed: false },
     ],
   },
   {

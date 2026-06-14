@@ -79,16 +79,18 @@ graph LR
 
 ## Status — iterative build
 
-- ✅ **Iter 1 (current): paymentless end-to-end.** Create an event subname with metadata
-  records; RSVP mints a ticket subname owned by the attendee; capacity enforced on-chain.
-  An agent resolves the event by name, RSVPs, and re-resolves the new ticket to confirm
-  `status=going`.
-- ⬜ **Iter 2 — ENS depth.** Soulbound tickets (`CANNOT_TRANSFER` fuse), an ABI record on the
-  event node for agent self-discovery, reverse resolution in the UI.
+- ✅ **Iter 1: paymentless end-to-end.** Create an event subname with metadata records; RSVP
+  mints a ticket subname owned by the attendee; capacity enforced on-chain. An agent resolves
+  the event by name, RSVPs, and re-resolves the new ticket to confirm `status=going`.
+- ✅ **Iter 2: ENS depth + product.** Each event is **self-describing** — the event name
+  resolves to the contract (`addr` record) and carries the rsvp **ABI record** (ENSIP-4), so an
+  agent discovers *how* to RSVP purely from ENS. Permissionless hosting (`createEvent` from the
+  UI), per-label RSVP dedupe, and a **moderator** (`owner`) who can `revokeEvent` (soft-delete:
+  blocks RSVPs + flags `xyz.junto.status = revoked`). The web app is a full landing page +
+  discovery grid (events read from `EventCreated` logs) + detail / RSVP / create / revoke.
 - ⬜ **Iter 3 — AI personalization + payment.** Read the owner's ENS profile, curate events
   with an LLM, optional USDC ticket payment to the host treasury (addr record).
-- ⬜ **Iter 4 — Reputation/discovery.** ERC-8004 identity + reputation keyed to ENS; index
-  events for agent discovery.
+- ⬜ **Iter 4 — Reputation/discovery.** ERC-8004 identity + reputation keyed to ENS.
 
 ## Layout
 
@@ -117,6 +119,8 @@ cp .env.sample .env             # fill PRIVATE_KEY, SEPOLIA_RPC_URL, EVENT_MANAG
 pnpm install
 pnpm tsx src/resolveEvent.ts ethny.juntoevents.eth        # read event records
 pnpm tsx src/rsvp.ts          ethny.juntoevents.eth alice # RSVP -> mints alice.ethny.juntoevents.eth
+HOST_PRIVATE_KEY=0x.. pnpm tsx src/seedEvents.ts          # seed a batch of NYC events (idempotent)
+OWNER_PRIVATE_KEY=0x.. pnpm tsx src/revoke.ts ethny.juntoevents.eth  # moderator revoke
 ```
 
 Cross-check the resulting ticket subname on https://sepolia.app.ens.domains.
@@ -125,11 +129,11 @@ Cross-check the resulting ticket subname on https://sepolia.app.ens.domains.
 # 3. Web UI (reads live data; defaults point at the deployed contract)
 cd ../web
 pnpm install
-pnpm dev          # http://localhost:5183 — browse the event, RSVP from a wallet
+pnpm dev          # http://localhost:5183 — landing page, event grid, RSVP, host, revoke
 ```
 
-The UI reads event metadata from ENS records and the attendee list from `RSVP` logs, and
-RSVPs by calling the contract from an injected wallet (MetaMask) on Sepolia — no backend.
+The UI discovers events from `EventCreated` logs, reads metadata + attendees from ENS, and
+writes (RSVP / create / revoke) from an injected wallet (MetaMask) on Sepolia — no backend.
 
 ## Live on Sepolia
 
@@ -140,7 +144,7 @@ The full loop is deployed and verified end-to-end (paymentless):
 | Thing | Value |
 |---|---|
 | Parent name | `juntoevents.eth` (registered + wrapped) |
-| `EventManager` | [`0xd1CF5206ea14DA67cd2c58796F7B34A45802F1d6`](https://sepolia.etherscan.io/address/0xd1CF5206ea14DA67cd2c58796F7B34A45802F1d6) |
+| `EventManager` | [`0x7BaA0fA7193F62aB746735D960c44cE418d65537`](https://sepolia.etherscan.io/address/0x7BaA0fA7193F62aB746735D960c44cE418d65537) |
 | Example event | `ethny.juntoevents.eth` |
 | Example ticket | `alice.ethny.juntoevents.eth` → `xyz.junto.status = "going"` |
 
@@ -148,11 +152,11 @@ Verified agent run: discover event by ENS resolution → `rsvp()` mints the tick
 re-resolve confirms `status=going` (see `assets/screenshot-3-agent.png`).
 
 <p align="center">
-  <img src="assets/app-home.png" alt="Junto web app reading live ENS data" width="640" />
+  <img src="assets/app-landing.png" alt="Junto landing page with the live ENS event discovery grid" width="720" />
 </p>
 
-The web app above reads the event, RSVP count, and attendee ticket subnames live from ENS
-records and on-chain logs — no backend.
+The landing page discovers every event from `EventCreated` logs and resolves each one's ENS
+records live — no backend.
 
 ## Prerequisite
 
@@ -161,11 +165,15 @@ with Sepolia faucet ETH. This is the parent the `EventManager` mints events unde
 
 ## Contract surface (`EventManager`)
 
-- `createEvent(label, capacity, keys[], values[])` → mints the event subname, writes metadata
-  records, records host/capacity. Event node is held by the contract so it can mint tickets.
+- `createEvent(label, capacity, keys[], values[])` → **permissionless**; mints the event
+  subname, writes metadata records, and sets self-discovery records (`addr` = this contract,
+  ABI record = the rsvp interface). Event node is held by the contract so it can mint tickets.
 - `rsvp(eventNode, attendeeLabel)` → mints the ticket subname to the contract, sets
   `xyz.junto.status = going`, transfers the ticket to the attendee, increments the count
-  (capacity `0` = uncapped).
+  (capacity `0` = uncapped; each label can RSVP once).
+- `revokeEvent(eventNode)` → **owner-only** moderation; marks the event closed and flags
+  `xyz.junto.status = revoked` so the UI drops it.
+- `owner` / `transferOwnership(addr)` → the Junto moderator role.
 
 Sepolia ENS deployments used: NameWrapper `0x0635…fcE8`, PublicResolver `0xE996…49b5`,
 ETHRegistrarController `0xfb3c…f968`.

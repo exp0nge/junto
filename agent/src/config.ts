@@ -33,6 +33,18 @@ export function requireEnv(name: string): string {
 export const EVENT_MANAGER_ABI = [
   {
     type: "function",
+    name: "createEvent",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "label", type: "string" },
+      { name: "capacity", type: "uint256" },
+      { name: "keys", type: "string[]" },
+      { name: "values", type: "string[]" },
+    ],
+    outputs: [{ name: "eventNode", type: "bytes32" }],
+  },
+  {
+    type: "function",
     name: "rsvp",
     stateMutability: "nonpayable",
     inputs: [
@@ -40,6 +52,13 @@ export const EVENT_MANAGER_ABI = [
       { name: "attendeeLabel", type: "string" },
     ],
     outputs: [{ name: "ticketNode", type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "revokeEvent",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "eventNode", type: "bytes32" }],
+    outputs: [],
   },
   {
     type: "function",

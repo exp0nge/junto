@@ -2,7 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {EventManager, INameWrapper, ITextResolver} from "../src/EventManager.sol";
+import {EventManager, INameWrapper, IResolver} from "../src/EventManager.sol";
 
 /// @dev Minimal NameWrapper stand-in: computes subnode namehashes, tracks ERC1155 ownership,
 ///      and supports the approval/transfer surface EventManager touches.
@@ -30,11 +30,21 @@ contract MockNameWrapper is INameWrapper {
     }
 }
 
-contract MockResolver is ITextResolver {
+contract MockResolver is IResolver {
     mapping(bytes32 => mapping(string => string)) public text;
+    mapping(bytes32 => address) public addr;
+    mapping(bytes32 => bytes) public abiData;
 
     function setText(bytes32 node, string calldata key, string calldata value) external {
         text[node][key] = value;
+    }
+
+    function setAddr(bytes32 node, address a) external {
+        addr[node] = a;
+    }
+
+    function setABI(bytes32 node, uint256, bytes calldata data) external {
+        abiData[node] = data;
     }
 }
 
@@ -83,6 +93,36 @@ contract EventManagerTest is Test {
         assertEq(wrapper.ownerOf(uint256(eventNode)), address(mgr));
         assertEq(resolver.text(eventNode, "xyz.junto.title"), "ETHGlobal NY Kickoff");
         assertEq(resolver.text(eventNode, "xyz.junto.location"), "New York");
+
+        // Iter 2 self-discovery records: name resolves to the manager + carries the rsvp ABI.
+        assertEq(resolver.addr(eventNode), address(mgr));
+        assertGt(resolver.abiData(eventNode).length, 0);
+    }
+
+    function test_RevokeEvent_OwnerBlocksRsvp() public {
+        bytes32 eventNode = _createSampleEvent(0);
+        // deployer of mgr is this test contract -> it is owner
+        mgr.revokeEvent(eventNode);
+        assertEq(resolver.text(eventNode, "xyz.junto.status"), "revoked");
+        vm.prank(alice);
+        vm.expectRevert(EventManager.EventNotFound.selector);
+        mgr.rsvp(eventNode, "alice");
+    }
+
+    function test_RevokeEvent_OnlyOwner() public {
+        bytes32 eventNode = _createSampleEvent(0);
+        vm.prank(alice);
+        vm.expectRevert(EventManager.NotOwner.selector);
+        mgr.revokeEvent(eventNode);
+    }
+
+    function test_Rsvp_RevertsOnDuplicateLabel() public {
+        bytes32 eventNode = _createSampleEvent(0);
+        vm.prank(alice);
+        mgr.rsvp(eventNode, "alice");
+        vm.prank(bob);
+        vm.expectRevert(EventManager.AlreadyRSVPed.selector);
+        mgr.rsvp(eventNode, "alice");
     }
 
     function test_Rsvp_MintsTicketToAttendeeWithStatus() public {
